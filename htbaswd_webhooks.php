@@ -7,8 +7,7 @@
 // Retrieve file data
 $ini_files_data = parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini");
 if (!is_array($ini_files_data)) {
-  // @todo: Write an error message to syslog or send email
-  //        Maybe write a shell script that gets called?
+  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Could not access ini_files_info.ini"');
   exit(1);
 }
 $ini_file_base_path = $ini_files_data['path'];
@@ -57,9 +56,11 @@ if (is_array($mysql_credentials) && is_array($webhook_credentials)) {
 } else {
   if (!is_array($mysql_credentials)) {
     wh_log('Unable to process database credentials!');
+    shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process database credentials"');
   }
   if (!is_array($webhook_credentials)) {
     wh_log('Unable to process web hook credentials!');
+    shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process web hook credentials"');
   }
 }
 

@@ -24,8 +24,7 @@
 // Retrieve file data
 $ini_files_data = parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini");
 if (!is_array($ini_files_data)) {
-  // @todo: Write an error message to syslog or send email
-  //        Maybe write a shell script that gets called?
+  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Could not access ini_files_info.ini"');
   exit(1);
 }
 $ini_file_base_path = $ini_files_data['path'];
@@ -53,18 +52,19 @@ if (is_array($mysql_credentials)) {
   foreach ($dbh->query($sql) as $row) {
     if ($row['nextrun'] < $current_time) {
       $next_email_file = INIFILEBASEPATH . $row['nextfile'];
-      if (file_exists($next_email_file)) {
-        $file_array = parse_ini_file($next_email_file);
+      if ($file_array = parse_ini_file($next_email_file)) {
         format_next_email($file_array, $row['email'], $row['uid']);
         log_email_sequence($row['email'], $row['nextfile']);
         update_subscriber_table($file_array, $row['email'], $row['nextrun'], $mysql_credentials);
       } else {
         cj_log('Unable to process email .ini file: ' . $next_email_file);
+        shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process email .ini file: "' . $next_email_file);
       }
     }
   }
 } else {
   cj_log('Unable to process database credentials!');
+  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process database credentials"');
 }
 
 /**
