@@ -21,10 +21,19 @@
  * subscriber.
  */
 
+// Retrieve file data
+$ini_files_data = parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini");
+if (!is_array($ini_files_data)) {
+  // @todo: Write an error message to syslog or send email
+  //        Maybe write a shell script that gets called?
+  exit(1);
+}
+$ini_file_base_path = $ini_files_data['path'];
+$mysqlCredentialsFile = $ini_files_data['mysql'];
+
 // Define file locations and database connection information
-define("INIFILEBASEPATH", "/private/htbaswd/email_sequence/");
-define("MYSQLCREDENTIALS", "/private/htbaswd/email_sequence/.my.cnf");
-define("DSN", "mysql:host=db02.isaacsonwebdevelopment.com;dbname=mc_webhook");
+define("INIFILEBASEPATH", $ini_file_base_path);
+define("MYSQLCREDENTIALS", $ini_file_base_path . $mysqlCredentialsFile);
 
 // Capture current time for comparison to next run time
 $current_time = time();
@@ -32,6 +41,7 @@ $current_time = time();
 // Parse the mysql credentials
 $mysql_credentials = parse_ini_file(MYSQLCREDENTIALS);
 if (is_array($mysql_credentials)) {
+  define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
   $dsn = DSN;
   $username = $mysql_credentials['user'];
   $password = $mysql_credentials['password'];

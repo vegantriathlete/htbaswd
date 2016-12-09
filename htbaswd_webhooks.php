@@ -4,20 +4,27 @@
  * @file Process MailChimp web hooks
  */
 
-// Note: This program should have permissions set via
-//       chmod u+s so that Apache can access the necessary files
-//       ls -l should show rwsr-x---
+// Retrieve file data
+$ini_files_data = parse_ini_file("./ini_files_info.ini");
+if (!is_array($ini_files_data)) {
+  // @todo: Write an error message to syslog or send email
+  //        Maybe write a shell script that gets called?
+  exit(1);
+}
+$ini_file_base_path = $ini_files_data['path'];
+$mysqlCredentialsFile = $ini_files_data['mysql'];
+$webhookCredentialsFile = $ini_files_data['webhook'];
 
 // Define file locations and database connection information
-define("INIFILEBASEPATH", "/private/htbaswd/email_sequence/");
-define("MYSQLCREDENTIALS", "/private/htbaswd/email_sequence/.my.cnf");
-define("DSN", "mysql:host=db02.isaacsonwebdevelopment.com;dbname=mc_webhook");
-define("WEBHOOKCREDENTIALS", "/private/htbaswd/email_sequence/webhook.ini");
+define("INIFILEBASEPATH", $ini_file_base_path);
+define("MYSQLCREDENTIALS", $ini_file_base_path . $mysqlCredentialsFile);
+define("WEBHOOKCREDENTIALS", $ini_file_base_path . $webhookCredentialsFile);
 
-// Parse the mysql credentials
+// Parse the credentials files
 $mysql_credentials = parse_ini_file(MYSQLCREDENTIALS);
 $webhook_credentials = parse_ini_file(WEBHOOKCREDENTIALS);
 if (is_array($mysql_credentials) && is_array($webhook_credentials)) {
+  define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
 
   wh_log('==================[ Incoming Request ]==================');
 
