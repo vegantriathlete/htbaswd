@@ -5,7 +5,7 @@
  */
 
 // Retrieve file data
-$ini_files_data = parse_ini_file("./ini_files_info.ini");
+$ini_files_data = parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini");
 if (!is_array($ini_files_data)) {
   // @todo: Write an error message to syslog or send email
   //        Maybe write a shell script that gets called?
