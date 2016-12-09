@@ -12,11 +12,12 @@
 define("INIFILEBASEPATH", "/private/htbaswd/email_sequence/");
 define("MYSQLCREDENTIALS", "/private/htbaswd/email_sequence/.my.cnf");
 define("DSN", "mysql:host=db02.isaacsonwebdevelopment.com;dbname=mc_webhook");
-define("WEBHOOKKEY", "29M;;{FTpRQ4Kwqq");
+define("WEBHOOKCREDENTIALS", "/private/htbaswd/email_sequence/webhook.ini");
 
 // Parse the mysql credentials
 $mysql_credentials = parse_ini_file(MYSQLCREDENTIALS);
-if (is_array($mysql_credentials)) {
+$webhook_credentials = parse_ini_file(WEBHOOKCREDENTIALS);
+if (is_array($mysql_credentials) && is_array($webhook_credentials)) {
 
   wh_log('==================[ Incoming Request ]==================');
 
@@ -24,9 +25,9 @@ if (is_array($mysql_credentials)) {
 
   if ( !isset($_GET['key']) ){
     wh_log('No security key specified, ignoring request'); 
-  } elseif ($_GET['key'] != WEBHOOKKEY) {
+  } elseif ($_GET['key'] != $webhook_credentials['key']) {
     wh_log('Security key specified, but not correct:');
-    wh_log("\t".'Wanted: "' . WEBHOOKKEY . '", but received "'.$_GET['key'].'"');
+    wh_log("\t".'Wanted: "' . $webhook_credentials['key'] . '", but received "'.$_GET['key'].'"');
   } else {
     //process the request
     wh_log('Processing a "'.$_POST['type'].'" request...');
@@ -47,7 +48,12 @@ if (is_array($mysql_credentials)) {
   }
   wh_log('Finished processing request.');
 } else {
-  wh_log('Unable to process database credentials!');
+  if (!is_array($mysql_credentials)) {
+    wh_log('Unable to process database credentials!');
+  }
+  if (!is_array($webhook_credentials)) {
+    wh_log('Unable to process web hook credentials!');
+  }
 }
 
 /***********************************************
