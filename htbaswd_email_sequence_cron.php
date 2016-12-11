@@ -26,15 +26,29 @@
  * Expected contents of ini_files_info.ini:
  * path = "/path/to/your/ini/files"
  * mysql = "nameofyourmysqlconfigfile"
+ * canspam = "nameofyourcanspamconfigfile"
  *
  * This program expects that there will be a mysql config file with the name
- * and location as specified in the above file.
+ * and location as specified in the ini_files_info.ini file.
  *
  * Expected contents of mysql config file:
  * user = "yourusername"
  * password = "yourpassword"
  * host = "yourdatabasehost"
  * database = "yourdesireddatabase"
+ *
+ * This program expects that there will be a canspam config file with the name
+ * and location as specified in the ini_files_info.ini file.
+ *
+ * Expected contents of canspam config file:
+ * signup_url = "https://www.yourwebsite.com"
+ * email_list = "https://youremaillist.us14.list-manage.com/profile/?u=somestringofcharacters&id=morechars"
+ * addressee = "Your name or company name"
+ * street = "123 Main Street"
+ * city = "Awesometown"
+ * state = "CO"
+ * zip = "12345"
+ * reply_to = "info@yourwebsite.com"
  *
  * Finally, this program assumes that there is an error-reporting.sh executable
  * file located in the same directory where this program is located that takes
@@ -49,10 +63,12 @@ if (($ini_files_data = @parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini"
 }
 $ini_file_base_path = $ini_files_data['path'];
 $mysqlCredentialsFile = $ini_files_data['mysql'];
+$canspamCredentialsFile = $ini_files_data['canspam'];
 
 // Define file locations and database connection information
 define("INIFILEBASEPATH", $ini_file_base_path);
 define("MYSQLCREDENTIALS", $ini_file_base_path . $mysqlCredentialsFile);
+define("CANSPAMCREDENTIALS", $ini_file_base_path . $canspamCredentialsFile);
 
 // Capture current time for comparison to next run time
 $current_time = time();
@@ -60,6 +76,13 @@ $current_time = time();
 // Parse the mysql credentials
 if (($mysql_credentials = @parse_ini_file(MYSQLCREDENTIALS)) == FALSE) {
   $error = 'Unable to parse database credentials!';
+  cj_log($error);
+  throw new Exception($error);
+}
+
+// Parse the canspam credentials
+if (($canspam_credentials = @parse_ini_file(CANSPAMCREDENTIALS)) == FALSE) {
+  $error = 'Unable to parse canspam credentials!';
   cj_log($error);
   throw new Exception($error);
 }
@@ -75,7 +98,7 @@ foreach ($dbh->query($sql) as $row) {
   if ($row['nextrun'] < $current_time) {
     $next_email_file = INIFILEBASEPATH . $row['nextfile'];
     if ($file_array = @parse_ini_file($next_email_file)) {
-      format_next_email($file_array, $row['email'], $row['uid']);
+      format_next_email($file_array, $row['email'], $row['uid'], $canspam_credentials);
       log_email_sequence($row['email'], $row['nextfile']);
       update_subscriber_table($file_array, $row['email'], $row['nextrun'], $mysql_credentials);
     } else {
@@ -98,13 +121,15 @@ exit(0);
  *   The email address to which to send the email
  * @param string $uid
  *   The UUID MailChimp assigned to the subscriber
+ * @param array $canspam_credentials
+ *   The information to include to comply with the CANSPAM act
  */
-function format_next_email($file_array, $subscriber, $uid) {
+function format_next_email($file_array, $subscriber, $uid, $canspam_credentials) {
   $to = $subscriber;
   $subject = $file_array['subject'];
   $body = $file_array['body'];
   $next_file = $file_array['next_file'];
-  append_canspam_information($body, $uid, $next_file);
+  append_canspam_information($body, $uid, $next_file, $canspam_credentials);
   mail($to, $subject, $body);
 }
 
@@ -117,18 +142,23 @@ function format_next_email($file_array, $subscriber, $uid) {
  *   The UUID MailChimp assigned to the subscriber
  * @param string $next_file
  *   The name of the next file in the sequence or NULL
+ * @param array $canspam_credentials
+ *   The information to include to comply with the CANSPAM act
  */
-function append_canspam_information(&$body, $uid, $next_file) {
+function append_canspam_information(&$body, $uid, $next_file, $canspam_credentials) {
   if (!$next_file) {
     $canspam = "\r\n\r\nI hope you have enjoyed this free course. If you'd like to get more support being a successful web developer, I'd love for you to join me at https://forums.successfulwebdeveloper.com. I hope to \"see\" you there!";
   } else {
     $canspam = "\r\n\r\n\r\n\r\n\r\nWant more? Check out https://forums.successfulwebdeveloper.com\r\n";
   }
-  $canspam .= "\r\n\r\nYou are receiving this email because you subscribed at https://www.howtobeasuccessfulwebdeveloper.com\r\n";
-  $canspam .= "If you wish to maintain your email preferences you may visit https://howtobeasuccessfulwebdeveloper.us14.list-manage.com/profile/?u=6434dc91133bf0f86af1a5093&id=aa7968bdff&e=$uid\r\n";
-  $canspam .= "\r\n\r\nHow to Be A Successful Web Developer\r\n";
-  $canspam .= "1460 S Iris St\r\nLakewood, CO 80232\r\n";
-  $canspam .= "info@howtobeasuccessfulwebdeveloper.com";
+  $canspam .= "\r\n\r\nYou are receiving this email because you subscribed at " . $canspam_credentials['signup_url'] . "\r\n";
+  $canspam .= "If you wish to maintain your email preferences you may visit " . $canspam_credentials['email_list'] . "&e=$uid\r\n";
+  $canspam .= "\r\n\r\n" . $canspam_credentials['addressee'] . "\r\n";
+  $canspam .= $canspam_credentials['street'] . "\r\n";
+  $canspam .= $canspam_credentials['city'] . ", ";
+  $canspam .= $canspam_credentials['state'] . " ";
+  $canspam .= $canspam_credentials['zip'] . "\r\n";
+  $canspam .= $canspam_credentials['reply_to'];
   $body .= $canspam;
 }
 
