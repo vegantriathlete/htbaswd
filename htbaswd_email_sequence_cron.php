@@ -46,25 +46,25 @@ if (($mysql_credentials = @parse_ini_file(MYSQLCREDENTIALS)) == FALSE) {
 
 // Process the subscribers
   define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
-  $dsn = DSN;
-  $username = $mysql_credentials['user'];
-  $password = $mysql_credentials['password'];
-  $dbh = new PDO($dsn, $username, $password);
-  $sql = 'SELECT email, nextrun, nextfile, uid FROM subscribers;';
-  foreach ($dbh->query($sql) as $row) {
-    if ($row['nextrun'] < $current_time) {
-      $next_email_file = INIFILEBASEPATH . $row['nextfile'];
-      if ($file_array = @parse_ini_file($next_email_file)) {
-        format_next_email($file_array, $row['email'], $row['uid']);
-        log_email_sequence($row['email'], $row['nextfile']);
-        update_subscriber_table($file_array, $row['email'], $row['nextrun'], $mysql_credentials);
-      } else {
-        $error = 'Unable to process email .ini file: ' . $next_email_file;
-        cj_log($error);
-        throw new Exception($error);
-      }
+$dsn = DSN;
+$username = $mysql_credentials['user'];
+$password = $mysql_credentials['password'];
+$dbh = new PDO($dsn, $username, $password);
+$sql = 'SELECT email, nextrun, nextfile, uid FROM subscribers;';
+foreach ($dbh->query($sql) as $row) {
+  if ($row['nextrun'] < $current_time) {
+    $next_email_file = INIFILEBASEPATH . $row['nextfile'];
+    if ($file_array = @parse_ini_file($next_email_file)) {
+      format_next_email($file_array, $row['email'], $row['uid']);
+      log_email_sequence($row['email'], $row['nextfile']);
+      update_subscriber_table($file_array, $row['email'], $row['nextrun'], $mysql_credentials);
+    } else {
+      $error = 'Unable to process email .ini file: ' . $next_email_file;
+      cj_log($error);
+      throw new Exception($error);
     }
   }
+}
 
 // Finish processing
 exit(0);
@@ -157,7 +157,7 @@ function update_subscriber_table($file_array, $subscriber, $nextrun, $mysql_cred
 }
 
 /**
- * Log activity to the webhook log file
+ * Log activity to the cron log file
  *
  * @param string $message
  *   The message to write to the log file
