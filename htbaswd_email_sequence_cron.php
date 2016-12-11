@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @file cron_job.php - Process email subscriptions
+ * @file htbaswd_email_sequence_cron.php - Process email subscriptions
  *
  * This is the program that is called on cron runs to read through the
  * subscribers table in the mc_webhook database in order to handle
@@ -17,8 +17,28 @@
  * The next email is named in the .ini file with the next_file key.
  * If there is a next_file, then update the subscriber table with a nextrun
  * timestamp that is 24 hours from now and with the value of next_file.
- * If there is not a next_fie, then delete the row from the table for this
+ * If there is not a next_file, then delete the row from the table for this
  * subscriber.
+ *
+ * This program assumes that there is an ini_files_info.ini file located in the
+ * same directory where this program is located.
+ *
+ * Expected contents of ini_files_info.ini:
+ * path = "/path/to/your/ini/files"
+ * mysql = "nameofyourmysqlconfigfile"
+ *
+ * This program expects that there will be a mysql config file with the name
+ * and location as specified in the above file.
+ *
+ * Expected contents of mysql config file:
+ * user = "yourusername"
+ * password = "yourpassword"
+ * host = "yourdatabasehost"
+ * database = "yourdesireddatabase"
+ *
+ * Finally, this program assumes that there is an error-reporting.sh executable
+ * file located in the same directory where this program is located that takes
+ * care of reporting errors.
  */
 
 set_exception_handler('handleException');
@@ -45,7 +65,7 @@ if (($mysql_credentials = @parse_ini_file(MYSQLCREDENTIALS)) == FALSE) {
 }
 
 // Process the subscribers
-  define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
+define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
 $dsn = DSN;
 $username = $mysql_credentials['user'];
 $password = $mysql_credentials['password'];
