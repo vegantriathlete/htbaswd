@@ -21,11 +21,11 @@
  * subscriber.
  */
 
+set_exception_handler('handleException');
+
 // Retrieve file data
-$ini_files_data = parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini");
-if (!is_array($ini_files_data)) {
-  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Could not access ini_files_info.ini"');
-  exit(1);
+if (($ini_files_data = @parse_ini_file(dirname(__FILE__) . "/ini_files_info.ini")) == FALSE) {
+  throw new Exception("Could not access ini_files_info.ini");
 }
 $ini_file_base_path = $ini_files_data['path'];
 $mysqlCredentialsFile = $ini_files_data['mysql'];
@@ -38,34 +38,36 @@ define("MYSQLCREDENTIALS", $ini_file_base_path . $mysqlCredentialsFile);
 $current_time = time();
 
 // Parse the mysql credentials
-$mysql_credentials = parse_ini_file(MYSQLCREDENTIALS);
-if (is_array($mysql_credentials)) {
+if (($mysql_credentials = @parse_ini_file(MYSQLCREDENTIALS)) == FALSE) {
+  $error = 'Unable to parse database credentials!';
+  cj_log($error);
+  throw new Exception($error);
+}
+
+// Process the subscribers
   define("DSN", "mysql:host=" . $mysql_credentials['host'] . ";dbname=" . $mysql_credentials['database']);
   $dsn = DSN;
   $username = $mysql_credentials['user'];
   $password = $mysql_credentials['password'];
   $dbh = new PDO($dsn, $username, $password);
   $sql = 'SELECT email, nextrun, nextfile, uid FROM subscribers;';
-  // @todo: Should I be checking if the connection was successful?
-  //        Maybe I should have a look a how Drupal handles things with
-  //        the settings.php file and making connections to the database.
   foreach ($dbh->query($sql) as $row) {
     if ($row['nextrun'] < $current_time) {
       $next_email_file = INIFILEBASEPATH . $row['nextfile'];
-      if ($file_array = parse_ini_file($next_email_file)) {
+      if ($file_array = @parse_ini_file($next_email_file)) {
         format_next_email($file_array, $row['email'], $row['uid']);
         log_email_sequence($row['email'], $row['nextfile']);
         update_subscriber_table($file_array, $row['email'], $row['nextrun'], $mysql_credentials);
       } else {
-        cj_log('Unable to process email .ini file: ' . $next_email_file);
-        shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process email .ini file: "' . $next_email_file);
+        $error = 'Unable to process email .ini file: ' . $next_email_file;
+        cj_log($error);
+        throw new Exception($error);
       }
     }
   }
-} else {
-  cj_log('Unable to process database credentials!');
-  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '" Unable to process database credentials"');
-}
+
+// Finish processing
+exit(0);
 
 /**
  * Create and send the next email in the sequence
@@ -181,4 +183,12 @@ function send_completion_notification($subscriber) {
   $body .= ' If s/he has subscribed, then remove the email address';
   $body .= ' from the info@howtobeasuccessfulwebdeveloper.com email list.';
   mail($to, $subject, $body);
+}
+
+/**
+ * Handle any exceptions that are thrown during execution
+ */
+function handleException($e) {
+  shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '": ' . $e->getMessage() . '"');
+  exit(1);
 }
