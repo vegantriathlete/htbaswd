@@ -2,6 +2,30 @@
 
 /**
  * @file Process MailChimp web hooks
+ *
+ * This is the program that is called by MailChimp when changes are made
+ * to the How to Be a Successful Web Developer email list.
+ *
+ * This program assumes that there is an ini_files_info.ini file located in the
+ * same directory where this program is located.
+ *
+ * Expected contents of ini_files_info.ini:
+ * path = "/path/to/your/ini/files"
+ * mysql = "nameofyourmysqlconfigfile"
+ * webhook = "nameofyourwebhookconfigfile"
+ *
+ * This program expects that there will be a mysql config file with the name
+ * and location as specified in the above file.
+ *
+ * Expected contents of mysql config file:
+ * user = "yourusername"
+ * password = "yourpassword"
+ * host = "yourdatabasehost"
+ * database = "yourdesireddatabase"
+ *
+ * Finally, this program assumes that there is an error-reporting.sh executable
+ * file located in the same directory where this program is located that takes
+ * care of reporting errors.
  */
 
 set_exception_handler('handleException');
@@ -64,14 +88,25 @@ if ( !isset($_GET['key']) ){
 wh_log('Finished processing request.');
 exit(0);
 
-/***********************************************
-    Helper Functions
-***********************************************/
+/**
+ * Write a log entry to the webhook log file
+ *
+ * @param string $msg
+ *   The message to be written to the log file
+ */
 function wh_log($msg){
     $logfile = INIFILEBASEPATH . 'webhook_log';
     file_put_contents($logfile,date("Y-m-d H:i:s")." | ".$msg."\n",FILE_APPEND);
 }
 
+/**
+ * Process a new subscriber to the email list
+ *
+ * @param array $data
+ *   The $_POST data that MailChimp sent
+ * @param array $mysql_credentials
+ *   The credentials to sign in to the database
+ */
 function subscribe($data, $mysql_credentials) {
   wh_log($data['email'] . ' just subscribed!');
   $dsn = DSN;
@@ -84,6 +119,15 @@ function subscribe($data, $mysql_credentials) {
   $insert = $db_insert_h->prepare($sql);
   $insert->execute($vars);
 }
+
+/**
+ * Process a request to unsubscribe from the email list
+ *
+ * @param array $data
+ *   The $_POST data that MailChimp sent
+ * @param array $mysql_credentials
+ *   The credentials to sign in to the database
+ */
 function unsubscribe($data, $mysql_credentials) {
   wh_log($data['email'] . ' just unsubscribed!');
   $dsn = DSN;
@@ -95,6 +139,15 @@ function unsubscribe($data, $mysql_credentials) {
   $delete = $db_delete_h->prepare($sql);
   $delete->execute($vars);
 }
+
+/**
+ * Clean an email address from the email list
+ *
+ * @param array $data
+ *   The $_POST data that MailChimp sent
+ * @param array $mysql_credentials
+ *   The credentials to sign in to the database
+ */
 function cleaned($data, $mysql_credentials) {
   wh_log($data['email'] . ' was cleaned from your list!');
   $dsn = DSN;
@@ -106,6 +159,15 @@ function cleaned($data, $mysql_credentials) {
   $delete = $db_delete_h->prepare($sql);
   $delete->execute($vars);
 }
+
+/**
+ * Update an email address on the email list
+ *
+ * @param array $data
+ *   The $_POST data that MailChimp sent
+ * @param array $mysql_credentials
+ *   The credentials to sign in to the database
+ */
 function upemail($data, $mysql_credentials) {
   wh_log($data['old_email'] . ' changed their email address to '. $data['new_email']. '!');
   $dsn = DSN;
@@ -117,9 +179,22 @@ function upemail($data, $mysql_credentials) {
   $update = $db_update_h->prepare($sql);
   $update->execute($vars);
 }
+
+/**
+ * Process a profile change on the email list
+ *
+ * @param array $data
+ *   The $_POST data that MailChimp sent
+ * @param array $mysql_credentials
+ *   The credentials to sign in to the database
+ */
 function profile($data, $mysql_credentials) {
     wh_log($data['email'] . ' updated their profile!');
 }
+
+/**
+ * Handle any exceptions that were thrown during execution
+ */
 function handleException($e) {
   shell_exec(dirname(__FILE__) . '/error-reporting.sh ' . __FILE__ . '": ' . $e->getMessage() . '"');
   exit(1);
