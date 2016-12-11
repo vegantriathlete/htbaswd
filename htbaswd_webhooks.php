@@ -15,13 +15,19 @@
  * webhook = "nameofyourwebhookconfigfile"
  *
  * This program expects that there will be a mysql config file with the name
- * and location as specified in the above file.
+ * and location as specified in the ini_files_info.ini file.
  *
  * Expected contents of mysql config file:
  * user = "yourusername"
  * password = "yourpassword"
  * host = "yourdatabasehost"
  * database = "yourdesireddatabase"
+ *
+ * This program expects that there will be a webhook config file with the name
+ * and location as specified in the ini_files_info.ini file.
+ *
+ * Expected contents of webhook config file:
+ * key = "keypassedasqueryargument"
  *
  * Finally, this program assumes that there is an error-reporting.sh executable
  * file located in the same directory where this program is located that takes
