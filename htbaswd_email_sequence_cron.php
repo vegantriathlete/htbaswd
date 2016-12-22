@@ -24,7 +24,7 @@
  * same directory where this program is located.
  *
  * Expected contents of ini_files_info.ini:
- * path = "/path/to/your/ini/files"
+ * path = "/path/to/your/ini/files/"
  * mysql = "nameofyourmysqlconfigfile"
  * canspam = "nameofyourcanspamconfigfile"
  *
